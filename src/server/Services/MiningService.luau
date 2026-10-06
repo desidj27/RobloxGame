@@ -28,6 +28,9 @@ local MiningService = {}
 
 MiningService.NODE_TAG = "OreNode"
 
+-- Veins are tinted toward white so they read against the rock they sit on.
+local VEIN_TINT = 0.35
+
 type Node = {
 	part: BasePart,
 	prompt: ProximityPrompt,
@@ -44,6 +47,22 @@ local lastSwing: { [Player]: number } = {}
 local rng = Random.new()
 local nodeCounter = 0
 
+-- Decorative child parts of a node (hand-placed "veins" in the starter world)
+-- follow the rolled ore's colour and fade out with the rock when it is depleted.
+local function styleVeins(part: BasePart, color: Color3?, material: Enum.Material?, transparency: number)
+	for _, child in part:GetChildren() do
+		if child:IsA("BasePart") then
+			if color then
+				child.Color = color
+			end
+			if material then
+				child.Material = material
+			end
+			child.Transparency = transparency
+		end
+	end
+end
+
 local function applyOre(node: Node, oreId: string)
 	local ore = Ores[oreId]
 	node.oreId = oreId
@@ -57,6 +76,7 @@ local function applyOre(node: Node, oreId: string)
 	part.Size = Vector3.new(ore.size, ore.size, ore.size)
 	part.Transparency = 0
 	part.CanCollide = true
+	styleVeins(part, ore.color:Lerp(Color3.new(1, 1, 1), VEIN_TINT), ore.material, 0)
 	part:SetAttribute("OreId", oreId)
 	part:SetAttribute("Health", node.health)
 	part:SetAttribute("MaxHealth", node.maxHealth)
@@ -77,6 +97,7 @@ local function deplete(node: Node)
 	node.part:SetAttribute("Depleted", true)
 	node.part.Transparency = 0.85
 	node.part.CanCollide = false
+	styleVeins(node.part, nil, nil, 0.85)
 	node.prompt.Enabled = false
 
 	task.delay(ore.respawnTime, function()
