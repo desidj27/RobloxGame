@@ -24,10 +24,7 @@
       }
     },
     "Workspace": {
-      "$className": "Workspace",
-      "$properties": {
-        "FilteringEnabled": true
-      }
+      "$className": "Workspace"
     },
     "Lighting": {
       "$className": "Lighting",

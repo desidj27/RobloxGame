@@ -43,4 +43,5 @@ export type SimpleResult = {
 	message: string?,
 }
 
-return nil
+-- Type-only module; ModuleScripts must still return a value.
+return {}
