@@ -1,14 +1,17 @@
-# Rojo build outputs other than the committed place file
+# Rojo build outputs other than the committed place file and the standalone world export
 *.rbxlx
 *.rbxm
 *.rbxmx
+!/src/workspace/**/*.rbxmx
 /build/*
 !/build/MiningFishingSim.rbxl
+!/build/StarterWorld.rbxmx
 
 # Tooling
 roblox.toml
 sourcemap.json
 .vscode/
+__pycache__/
 
 # OS
 .DS_Store

@@ -24,7 +24,10 @@
       }
     },
     "Workspace": {
-      "$className": "Workspace"
+      "$className": "Workspace",
+      "Worlds": {
+        "$path": "src/workspace/Worlds"
+      }
     },
     "Lighting": {
       "$className": "Lighting",
