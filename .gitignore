@@ -1,0 +1,15 @@
+# Rojo build outputs other than the committed place file
+*.rbxlx
+*.rbxm
+*.rbxmx
+/build/*
+!/build/MiningFishingSim.rbxl
+
+# Tooling
+roblox.toml
+sourcemap.json
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

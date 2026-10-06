@@ -1,0 +1,6 @@
+std = "roblox"
+
+[lints]
+shadowing = "allow"
+# Explicit UDim2.new(xs, xo, ys, yo) is used consistently in the generated UI.
+roblox_manual_fromscale_or_fromoffset = "allow"
