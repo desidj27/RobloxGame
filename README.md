@@ -20,8 +20,12 @@ and also ships a prebuilt place file at `build/MiningFishingSim.rbxl`.
 ### Option A — open the prebuilt place (no tooling)
 
 1. Download `build/MiningFishingSim.rbxl` and open it in Roblox Studio.
-2. Press **Play**. The server generates both worlds (ground, ore nodes, pond, egg stand, portals)
-   at runtime, so the empty Workspace in the file is expected.
+2. Press **Play**. `Workspace/Worlds/GrassyHills` is the hand-built starter world (see
+   [Starter world](#starter-world)); the server adopts it and generates Crystal Caverns from config
+   at runtime, so only one world is visible in the file before you press Play.
+
+`build/StarterWorld.rbxmx` is the Grassy Hills world on its own — in Studio use
+**File → Insert from file…** (or drag it into the viewport) to drop it into any place.
 
 ### Option B — sync with Rojo (recommended for development)
 
@@ -31,13 +35,17 @@ and also ships a prebuilt place file at `build/MiningFishingSim.rbxl`.
 2. Install the Rojo plugin into Studio: `rojo plugin install`.
 3. Serve the project: `rojo serve default.project.json`.
 4. In Studio open any place (or the prebuilt one), click **Rojo → Connect** (default
-   `localhost:34872`). Scripts under `src/` now live-sync into the place.
+   `localhost:34872`). Scripts under `src/` and the starter world under `src/workspace/` now
+   live-sync into the place. Rojo owns `Workspace/Worlds`, so hand-placed worlds belong in
+   `src/workspace/Worlds/` rather than loose in the Studio Explorer (Rojo will offer to remove them
+   on connect otherwise).
 5. Press **Play**.
 
 ### Build the place file yourself
 
 ```sh
-rojo build default.project.json -o build/MiningFishingSim.rbxl
+rojo build default.project.json -o build/MiningFishingSim.rbxl        # full place
+rojo build starter-world.project.json -o build/StarterWorld.rbxmx      # Grassy Hills model only
 ```
 
 ### DataStores in Studio
@@ -54,6 +62,20 @@ selene src
 stylua --check src
 ```
 
+### Regenerate the starter world
+
+The Grassy Hills model is produced by a deterministic, standard-library-only Python script so the
+layout can be tweaked in code and rebuilt without Studio:
+
+```sh
+python3 tools/build_starter_world.py     # rewrites src/workspace/Worlds/GrassyHills.rbxmx
+rojo build default.project.json -o build/MiningFishingSim.rbxl
+rojo build starter-world.project.json -o build/StarterWorld.rbxmx
+```
+
+Editing the world directly in Studio also works — save it back with **right-click → Save to File…**
+over `src/workspace/Worlds/GrassyHills.rbxmx` (Studio writes `.rbxmx` when you pick the XML format).
+
 ---
 
 ## Project layout
@@ -61,7 +83,13 @@ stylua --check src
 ```
 default.project.json         Rojo tree: src/shared → ReplicatedStorage.Shared,
                              src/server → ServerScriptService.Server,
-                             src/client → StarterPlayer.StarterPlayerScripts.Client
+                             src/client → StarterPlayer.StarterPlayerScripts.Client,
+                             src/workspace/Worlds → Workspace.Worlds
+starter-world.project.json   Rojo model project that builds the starter world alone
+src/workspace/Worlds/
+  GrassyHills.rbxmx          Hand-authored starter world (253 primitive parts, see below)
+tools/
+  build_starter_world.py     Generates GrassyHills.rbxmx deterministically (python3, no deps)
 src/shared/
   Config/                    All tunable data (pure tables)
     GameConfig.luau          Balance constants, base stats, cooldowns, ranges
@@ -96,28 +124,55 @@ src/client/
   UI/                        Generated UI: HUD, PetInventory, EggShop, RebirthPanel,
                              FishingOverlay, HatchPopup, Notifications, Create, Theme
 build/MiningFishingSim.rbxl  Prebuilt place (Rojo build of this tree)
+build/StarterWorld.rbxmx     Grassy Hills world alone, insertable into any place
 ```
+
+---
+
+## Starter world
+
+`Workspace/Worlds/GrassyHills` is a hand-authored map built from anchored primitive parts
+(Part / SpawnLocation with Roblox materials and colours, grouped into Models with PrimaryParts).
+Crystal Caverns has no hand-placed model yet and is still generated from `Config/Worlds.luau`.
+The ground is 180×180 studs with its top at `y = 0`; everything below is relative to that.
+
+| Area | Where | What is there |
+| --- | --- | --- |
+| Spawn plaza | centre `(0, 0)` | 40-stud cobblestone disc, marble inner ring, `SpawnLocation`, 8 brick planters with bushes, 4 lamps |
+| Signposts | plaza rim | Wooden boards with `SurfaceGui` labels **Mine**, **Fishing**, **Eggs**, **Rebirth**, **Portal**, each facing the plaza |
+| Paths | from the plaza | Cobblestone slabs to the mine, dock, hatchery, portal and rebirth shrine |
+| Mine | north-west `(-72…-30, -54…-14)` | Dirt floor, stepped Slate/Rock cliff along the north and west edges, 5 boulders, granite entrance arch with a **Mine** sign, minecart rails and cart, 6 ore-node rocks at the config spawn points, each with 3 protruding ore-tinted veins |
+| Pond | north-east, centre `(45, -30)` | 46×34 water slab with sandy shore, reeds and lily pads; 16-stud plank dock with posts and rails; the `FishingSpots/GrassyPond` part is an 18×16 zone off the end of the dock marked by 4 buoys |
+| Hatchery | north `(0, -47)` | Plank floor, 4 posts, pitched brick roof, marble pedestal + straw nest holding the `EggStands/MeadowEgg` ball, shop counter with an **Eggs** sign, shelf of decorative eggs |
+| Portal | south `(0, 60)` | Granite pillars and lintel topped with amethyst crystals, two shard-blue braziers (PointLights), the Neon `Portals/Portal_CrystalCaverns` part in the frame |
+| Rebirth shrine | south-west `(-30, 22)` | Cobblestone disc, marble plinth with a glowing gold orb, 4 pillars and a **Rebirth** plaque (rebirth itself is done from the HUD) |
+| Dressing | everywhere | 18 trees (Wood cylinder trunks + LeafyGrass sphere canopies), 10 lamps (Metal post, Neon lantern, PointLight), 2.5-stud hedge around the ground edge |
+
+Ore-node veins are child parts of the node; `MiningService` re-tints them to the rolled ore's colour
+(lerped 35 % toward white) and fades them with the rock when it is depleted.
 
 ---
 
 ## Workspace objects the scripts expect
 
 Everything is **optional** — on startup `WorldService` creates any missing folder and, when a
-folder has no parts in it, generates the defaults from `Config/Worlds.luau`. That is how the
-prebuilt place plays with an empty Workspace. To use your own map, build this tree in Studio and
-the server will adopt your parts (adding tags, prompts and attributes itself).
+folder has no parts in it, generates the defaults from `Config/Worlds.luau`. That is how Crystal
+Caverns plays without a hand-placed model. To use your own map, build this tree (in Studio or as
+a model file under `src/workspace/Worlds/`) and the server will adopt your parts (adding tags,
+prompts and attributes itself).
 
 Parts the server adopts are **renamed** (ore nodes), **anchored**, and ore nodes are **resized and
-recoloured** per ore type.
+recoloured** per ore type. Decorative models can live anywhere else in the world folder; the
+server only looks at the names below.
 
 | Path (under `Workspace`) | Class | Required | Attributes read | Notes |
 | --- | --- | --- | --- | --- |
 | `Worlds` | Folder | no (created) | — | Container for all worlds. |
-| `Worlds/<WorldId>` | Folder | no (created) | — | One per key in `Config/Worlds.luau` (`GrassyHills`, `CrystalCaverns`). |
+| `Worlds/<WorldId>` | Folder | no (created) | — | One per key in `Config/Worlds.luau` (`GrassyHills`, `CrystalCaverns`). Must be a `Folder` (not a `Model`) or the server creates a second one. Extra children (decor Models) are ignored. |
 | `Worlds/<WorldId>/Ground` | BasePart | no (generated) | — | If present, its top centre becomes the world origin for any generated defaults. |
 | `Worlds/<WorldId>/Spawn` | SpawnLocation or BasePart | no (generated for home world) | — | Where players arrive when they travel to / rebirth into this world. Only the home world gets a real `SpawnLocation` by default. |
 | `Worlds/<WorldId>/OreNodes` | Folder | no (created) | — | Holds ore node parts. Empty ⇒ defaults from `oreSpawns` are generated. |
-| `Worlds/<WorldId>/OreNodes/*` | BasePart | — | `Ores : string` e.g. `"Stone=10,Coal=4"` (optional; falls back to the world's `defaultOres`) | Server sets `OreId`, `Health`, `MaxHealth`, `Depleted`, `WorldId`, adds a ProximityPrompt and the `OreNode` tag. |
+| `Worlds/<WorldId>/OreNodes/*` | BasePart | — | `Ores : string` e.g. `"Stone=10,Coal=4"` (optional; falls back to the world's `defaultOres`) | Server sets `OreId`, `Health`, `MaxHealth`, `Depleted`, `WorldId`, adds a ProximityPrompt and the `OreNode` tag. Child BaseParts (veins) are recoloured with the ore and faded when depleted. |
 | `Worlds/<WorldId>/FishingSpots` | Folder | no (created) | — | Holds water parts. Empty ⇒ defaults from `fishingSpots` are generated. |
 | `Worlds/<WorldId>/FishingSpots/*` | BasePart | — | `SpotId : string` (optional, must be globally unique; defaults to `<WorldId>_<PartName>`), `Fish : string` e.g. `"Minnow=10,Bass=5"` (optional; falls back to `defaultFish`) | Server sets `WorldId`, adds a ProximityPrompt and the `FishingSpot` tag. Players must stand within `FISH_INTERACT_RANGE` of the part's edge. |
 | `Worlds/<WorldId>/EggStands` | Folder | no (created) | — | Empty ⇒ defaults from `eggStands` are generated. |
@@ -180,7 +235,10 @@ All numbers live in `src/shared/Config/` and `Formulas.luau`; nothing is hard-co
 
 ## What is not done / untested
 
-- No runtime test in Roblox Studio (see note at top).
+- No runtime test in Roblox Studio (see note at top). The starter world was verified structurally
+  (Rojo build, instance names/attributes/PrimaryParts in the output, a top-down plot of part
+  footprints) but has not been walked in-game; expect to nudge a few positions and sizes.
+- Crystal Caverns still uses the generated default layout.
 - Pets have no 3D models or follow behaviour — they are inventory entries with stat bonuses.
 - No tool / pickaxe / rod animations; interactions are ProximityPrompt-driven.
 - DataStore path is plain `SetAsync` without session locking (fine for a prototype, not for scale).
